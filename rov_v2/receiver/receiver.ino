@@ -1,47 +1,52 @@
-#include <VirtualWire.h>
+// Example 2 - Receive with an end-marker
 
-int valor_recebido_RF;
-char recebido_RF_char[4]; 
+const byte numChars = 10;
+char receivedChars[numChars];   // an array to store the received data
 
-// the setup function runs once when you press reset or power the board
+boolean newData = false;
+
 void setup() {
-  Serial.begin(9600);
-
-  vw_set_rx_pin(7);
-  vw_setup(5000); 
-  //Inicia a recepcao  
-  vw_rx_start();
-  Serial.println("Recepcao modulo RF - Aguardando...");
+    Serial.begin(9600);
+    while(!Serial);
+    Serial.println("<Arduino is ready>");
+    Serial1.begin(9600);
+    while(!Serial1);
+    Serial.println("<Arduino is ready>");
 }
 
-// the loop function runs over and over again forever
 void loop() {
+    recvWithEndMarker();
+    showNewData();
 
+    Serial1.println("ola...!");
+}
 
-  uint8_t buf[VW_MAX_MESSAGE_LEN];
-  uint8_t buflen = VW_MAX_MESSAGE_LEN;
+void recvWithEndMarker() {
+    static byte ndx = 0;
+    char endMarker = ':';
+    char rc;
     
-    if (vw_get_message(buf, &buflen)) 
-    {
-    int i;
-        for (i = 0; i < buflen; i++)
-       {            
-          //Armazena os caracteres recebidos  
-          recebido_RF_char[i] = char(buf[i]);
-       }
-       recebido_RF_char[buflen] = '\0';
-       
-       //Converte o valor recebido para integer
-       valor_recebido_RF = atoi(recebido_RF_char);
-         
-       //Mostra no serial monitor o valor recebido
-       Serial.print("Recebido: ");
-       Serial.print(valor_recebido_RF);
+    while (Serial1.available() > 0 && newData == false) {
+        rc = Serial1.read();
+
+        if (rc != endMarker) {
+            receivedChars[ndx] = rc;
+            ndx++;
+            if (ndx >= numChars) {
+                ndx = numChars - 1;
+            }
+        }
+        else {
+            receivedChars[ndx] = '\0'; // terminate the string
+            ndx = 0;
+            newData = true;
+        }
     }
 }
 
-
-
-
-
-
+void showNewData() {
+    if (newData == true) {
+        Serial.println(receivedChars);
+        newData = false;
+    }
+}
